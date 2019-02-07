@@ -19,7 +19,8 @@ type Message struct {
 func main()  {
 	// Configure websocket route
 	http.HandleFunc("/ws", handleConnections)
-
+	// Start listening for incoming chat messages
+	go handleMessages()
 	// Start the server on localhost port 8000 and log any errors
 	log.Println("http server started on :8000")
 	err := http.ListenAndServe(":8000", nil)
@@ -48,6 +49,22 @@ func handleConnections(w http.ResponseWriter, r *http.Request)  {
 			delete(clients, ws)
 			// Send the newly received message to the broadcast channel
 			broadcast <- msg
+		}
+	}
+}
+
+func handleMessages()  {
+	for {
+		// Grab the next message from the broadcast channel
+		msg := <-broadcast
+		// Send it out to every client that is currently connected
+		for client := range clients {
+			err := client.WriteJSON(msg)
+			if err != nil {
+				log.Printf("error: %v", err)
+				client.Close()
+				delete(clients, client)
+			}
 		}
 	}
 }
