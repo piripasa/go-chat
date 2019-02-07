@@ -8,6 +8,13 @@ import (
 
 var upgrader = websocket.Upgrader{}
 var clients = make(map[*websocket.Conn]bool)
+var broadcast = make(chan Message)
+
+type Message struct {
+	Email 	 string `json:"email"`
+	Username string `json:"Username"`
+	Message  string `json:"Message"`
+}
 
 func main()  {
 	// Configure websocket route
@@ -31,4 +38,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request)  {
 	defer ws.Close()
 
 	clients[ws] = true
+
+	for {
+		var msg Message
+		// Read in a new message as JSON and map it to a Message object
+		err := ws.ReadJSON(&msg)
+		if err != nil {
+			log.Printf("error: %v", err)
+			delete(clients, ws)
+			// Send the newly received message to the broadcast channel
+			broadcast <- msg
+		}
+	}
 }
