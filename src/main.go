@@ -17,10 +17,16 @@ type Message struct {
 }
 
 func main()  {
+	// Create a simple file server
+	fs := http.FileServer(http.Dir("../public"))
+	http.Handle("/", fs)
+
 	// Configure websocket route
 	http.HandleFunc("/ws", handleConnections)
+
 	// Start listening for incoming chat messages
 	go handleMessages()
+
 	// Start the server on localhost port 8000 and log any errors
 	log.Println("http server started on :8000")
 	err := http.ListenAndServe(":8000", nil)
@@ -39,7 +45,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request)  {
 	defer ws.Close()
 
 	clients[ws] = true
-
+	log.Println("client in")
 	for {
 		var msg Message
 		// Read in a new message as JSON and map it to a Message object
@@ -57,6 +63,7 @@ func handleMessages()  {
 	for {
 		// Grab the next message from the broadcast channel
 		msg := <-broadcast
+		log.Println("client in %v", msg)
 		// Send it out to every client that is currently connected
 		for client := range clients {
 			err := client.WriteJSON(msg)
